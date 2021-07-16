@@ -1,7 +1,7 @@
-import MainGrid from '../src/components/MainGrid'
-import Box from '../src/components/Box'
-import { AlurakutMenu, OrkutNostalgicIconSet, AlurakutProfileSidebarMenuDefault } from '../src/lib/AlurakutCommons'
-import { ProfileRelationsBoxWrapper } from '../src/components/ProfileRelationsArea'
+import MainGrid from '../components/MainGrid'
+import Box from '../components/Box'
+import { AlurakutMenu, OrkutNostalgicIconSet, AlurakutProfileSidebarMenuDefault } from '../lib/AlurakutCommons'
+import { ProfileRelationsBoxWrapper } from '../components/ProfileRelationsArea'
 import { useState, useEffect } from 'react'
 
 
@@ -65,13 +65,25 @@ export default function Home() {
     const dadosDoForm = new FormData(event.target)
 
     const comunidade = {
-      id: new Date().toISOString,
       title: dadosDoForm.get('title'),
-      image: dadosDoForm.get('image')
+      imageUrl: dadosDoForm.get('image'),
+      creatorSlug: dadosDoForm.get('creator'),
     }
 
-    const novaComunidade = [...comunidades, comunidade]
-    setComunidades(novaComunidade)
+    fetch('/api/comunidades', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(comunidade)
+    })
+      .then(async (response) => {
+        const dados = await response.json();
+        console.log(dados.registroCriado);
+        const comunidade = dados.registroCriado;
+        const comunidadesAtualizadas = [...comunidades, comunidade];
+        setComunidades(comunidadesAtualizadas)
+      })
   }
 
   useEffect(function () {
@@ -83,7 +95,37 @@ export default function Home() {
         setSeguidores(respostaCompleta)
         console.log(respostaCompleta)
       })
+
+
+    // API GraphQL
+    fetch('https://graphql.datocms.com/', {
+      method: 'POST',
+      headers: {
+        'Authorization': 'cc6639206e4cccec21aeafe87e534c',
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+      body: JSON.stringify({
+        "query": `query {
+        allComunities {
+          id 
+          title
+          imageUrl
+          creatorSlug
+        }
+      }` })
+    })
+      .then((response) => response.json()) // Pega o retorno do response.json() e já retorna
+      .then((respostaCompleta) => {
+        const comunidadesVindasDoDato = respostaCompleta.data.allComunities;
+        setComunidades(comunidadesVindasDoDato)
+      })
+    // .then(function (response) {
+    //   return response.json()
+    // })
   }, [])
+
+
 
 
   return (
@@ -139,11 +181,11 @@ export default function Home() {
             </h2>
 
             <ul>
-              {comunidades.map((comunidade) => {
+              {comunidades.filter((comunidade, index) => index < 6).map((comunidade) => {
                 return (
                   <li key={comunidade.id}>
-                    <a href={`/users/${comunidade.title}`} >
-                      <img src={comunidade.image} alt="" />
+                    <a href={`/communities/${comunidade.id}`}>
+                      <img src={comunidade.imageUrl} />
                       <span>{comunidade.title}</span>
                     </a>
                   </li>
